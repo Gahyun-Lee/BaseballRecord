@@ -19,16 +19,16 @@ export const TEAM_COLORS: Record<KboTeam, { primary: string; secondary: string; 
 };
 
 export const TEAM_LOGOS: Record<KboTeam, string> = {
-  KIA:  "https://lgfile.naver.com/kbaseball/kbo/ci/2024/KIA.png",
-  삼성:  "https://lgfile.naver.com/kbaseball/kbo/ci/2024/SS.png",
-  LG:   "https://lgfile.naver.com/kbaseball/kbo/ci/2024/LG.png",
-  두산:  "https://lgfile.naver.com/kbaseball/kbo/ci/2024/OB.png",
-  KT:   "https://lgfile.naver.com/kbaseball/kbo/ci/2024/KT.png",
-  SSG:  "https://lgfile.naver.com/kbaseball/kbo/ci/2024/SK.png",
-  롯데:  "https://lgfile.naver.com/kbaseball/kbo/ci/2024/LT.png",
-  한화:  "https://lgfile.naver.com/kbaseball/kbo/ci/2024/HH.png",
-  NC:   "https://lgfile.naver.com/kbaseball/kbo/ci/2024/NC.png",
-  키움:  "https://lgfile.naver.com/kbaseball/kbo/ci/2024/WO.png",
+  KIA:  "/logos/KIA.svg",
+  삼성:  "/logos/SS.svg",
+  LG:   "/logos/LG.svg",
+  두산:  "/logos/OB.svg",
+  KT:   "/logos/KT.svg",
+  SSG:  "/logos/SSG.svg",
+  롯데:  "/logos/LT.svg",
+  한화:  "/logos/HH.svg",
+  NC:   "/logos/NC.svg",
+  키움:  "/logos/WO.svg",
 };
 
 export const STADIUMS: Stadium[] = [

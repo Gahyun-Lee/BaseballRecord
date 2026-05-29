@@ -32,7 +32,7 @@ export default function RootLayout({
       <body className="min-h-full bg-gray-50 antialiased">
         <div className="max-w-lg mx-auto min-h-screen flex flex-col bg-white shadow-sm">
           <Header />
-          <main className="flex-1 pb-20">{children}</main>
+          <main className="flex-1 pb-20 flex flex-col">{children}</main>
           <Navbar />
         </div>
       </body>
