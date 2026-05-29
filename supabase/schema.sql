@@ -3,7 +3,7 @@ create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
   username text,
   favorite_team text,
-  favorite_players text[] default '{}',
+  favorite_players bigint[] default '{}',
   created_at timestamptz default now()
 );
 
@@ -34,6 +34,25 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- 선수 테이블 (KBO 전체 선수, 크롤링으로 갱신)
+create table public.players (
+  id bigint generated always as identity primary key,
+  player_id text unique,
+  name text not null,
+  team text not null,
+  position text,
+  back_number text,
+  updated_at timestamptz default now()
+);
+
+alter table public.players enable row level security;
+
+create policy "누구나 선수 목록 조회 가능"
+  on public.players for select
+  using (true);
+
+create index idx_players_team on public.players (team);
 
 -- 직관 기록 테이블
 create table public.observations (

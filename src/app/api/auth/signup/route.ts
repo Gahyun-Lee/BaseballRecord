@@ -19,10 +19,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  await supabaseAdmin
+  const { error: profileError } = await supabaseAdmin
     .from("profiles")
     .update({ username, favorite_team: favoriteTeam ?? null, favorite_players: favoritePlayers ?? [] })
     .eq("id", data.user.id);
+
+  if (profileError) {
+    return NextResponse.json({ error: profileError.message }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true });
 }
