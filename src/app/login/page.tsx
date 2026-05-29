@@ -1,106 +1,195 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Check } from "lucide-react";
+import type { KboTeam } from "@/types";
+import { EMAIL_REGEX, PASSWORD_RULES } from "@/utils/validation";
+import LoginForm from "./LoginForm";
+import SignupStep1 from "./SignupStep1";
+import SignupStep2 from "./SignupStep2";
+import SignupStep3 from "./SignupStep3";
+
+function StepIndicator({ step }: { step: number }) {
+  return (
+    <div className="flex items-center justify-center gap-0 mb-6">
+      {[1, 2, 3].map((s) => (
+        <div key={s} className="flex items-center">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors duration-300 ${
+            s < step ? "bg-navy-600 text-white" :
+            s === step ? "bg-navy-600 text-white ring-4 ring-navy-100" :
+            "bg-gray-100 text-gray-400"
+          }`}>
+            {s < step ? <Check size={14} /> : s}
+          </div>
+          {s < 3 && (
+            <div className={`w-12 h-0.5 transition-colors duration-300 ${s < step ? "bg-navy-600" : "bg-gray-200"}`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function LoginPage() {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [step, setStep] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const router = useRouter();
-  const supabase = createClient();
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [emailChecked, setEmailChecked] = useState(false);
+  const [emailTaken, setEmailTaken] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [showEmailTooltip, setShowEmailTooltip] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+
+  const [favoriteTeam, setFavoriteTeam] = useState<KboTeam | null>(null);
+  const [favoritePlayers, setFavoritePlayers] = useState<{ id: number; name: string; team: string }[]>([]);
+
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+
+  function handleToggle() {
+    setIsSignUp(!isSignUp);
+    setStep(1);
+    setError(null);
+    setUsername(""); setEmail(""); setPassword(""); setConfirmPassword("");
+    setEmailChecked(false); setEmailTaken(false);
+    setEmailError(null); setShowEmailTooltip(false);
+    setAgreeTerms(false); setAgreePrivacy(false);
+    setFavoriteTeam(null); setFavoritePlayers([]);
+  }
+
+  function goNext() {
+    setError(null);
+    if (step === 1) {
+      if (!agreeTerms || !agreePrivacy) { setError("필수 약관에 동의해주세요."); return; }
+    }
+    if (step === 2) {
+      if (!username.trim()) { setError("이름을 입력해주세요."); return; }
+      if (!EMAIL_REGEX.test(email)) { setError("올바른 이메일 형식이 아닙니다."); return; }
+      if (!emailChecked) { setError("이메일 중복 확인을 해주세요."); return; }
+      if (!PASSWORD_RULES.every((r) => r.test(password))) { setError("비밀번호 조건을 모두 충족해주세요."); return; }
+      if (password !== confirmPassword) { setError("비밀번호가 일치하지 않습니다."); return; }
+    }
+    setStep(step + 1);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+  }
+
+  function goPrev() {
+    setError(null);
+    setStep(step - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleSignUp() {
     setLoading(true);
     setError(null);
-    setMessage(null);
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, username, favoriteTeam, favoritePlayers: favoritePlayers.map((p) => p.id) }),
+      });
+      const result = await res.json();
+      if (result.error) { setError(result.error); return; }
 
-    if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        setError(error.message);
-      } else {
-        setMessage("이메일을 확인하여 인증을 완료해주세요.");
-      }
-    } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        setError("이메일 또는 비밀번호가 올바르지 않습니다.");
-      } else {
-        router.push("/mypage");
-        router.refresh();
+        setError("가입은 완료되었으나 로그인에 실패했습니다. 로그인 페이지에서 다시 시도해주세요.");
+        return;
       }
+      router.push("/mypage");
+      router.refresh();
+    } catch {
+      setError("네트워크 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  }
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!EMAIL_REGEX.test(email)) { setError("올바른 이메일 형식이 아닙니다."); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+      else { router.push("/mypage"); router.refresh(); }
+    } catch {
+      setError("네트워크 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="p-6 flex flex-col min-h-[60vh] justify-center gap-6">
+    <div className="flex-1 flex flex-col justify-center gap-6 px-6 py-10 max-w-sm mx-auto w-full">
       <div className="text-center">
-        <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto mb-4">
-          <span className="text-white text-3xl">⚾</span>
+        <div className="w-14 h-14 rounded-2xl bg-navy-600 flex items-center justify-center mx-auto mb-3">
+          <span className="text-white text-2xl">⚾</span>
         </div>
-        <h1 className="text-xl font-black text-gray-900">KBO 야구</h1>
-        <p className="text-sm text-gray-400 mt-1">{isSignUp ? "새 계정을 만들어보세요" : "로그인하고 야구 기록을 관리하세요"}</p>
+        <h1 className="text-lg font-black text-gray-900">KBO 야구</h1>
+        <p className="text-xs text-gray-400 mt-1">
+          {isSignUp ? `회원가입 (${step}/3)` : "로그인하고 야구 기록을 관리하세요"}
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="relative">
-          <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="email"
-            placeholder="이메일"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+      <div className="flex flex-col gap-4">
+        {!isSignUp && (
+          <LoginForm
+            email={email} setEmail={setEmail}
+            password={password} setPassword={setPassword}
+            loading={loading} error={error} onSubmit={handleLogin}
           />
-        </div>
-        <div className="relative">
-          <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="비밀번호"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="w-full pl-10 pr-10 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-          >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
+        )}
 
-        {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-        {message && <p className="text-sm text-green-600 text-center">{message}</p>}
+        {isSignUp && (
+          <div>
+            <StepIndicator step={step} />
+            <div className={step !== 1 ? "hidden" : ""}>
+              <SignupStep1
+                agreeTerms={agreeTerms} setAgreeTerms={setAgreeTerms}
+                agreePrivacy={agreePrivacy} setAgreePrivacy={setAgreePrivacy}
+                error={step === 1 ? error : null} onNext={goNext}
+              />
+            </div>
+            <div className={step !== 2 ? "hidden" : ""}>
+              <SignupStep2
+                username={username} setUsername={setUsername}
+                email={email} setEmail={setEmail}
+                password={password} setPassword={setPassword}
+                confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
+                emailChecked={emailChecked} setEmailChecked={setEmailChecked}
+                emailTaken={emailTaken} setEmailTaken={setEmailTaken}
+                emailError={emailError} setEmailError={setEmailError}
+                showEmailTooltip={showEmailTooltip} setShowEmailTooltip={setShowEmailTooltip}
+                error={step === 2 ? error : null} onNext={goNext} onPrev={goPrev}
+              />
+            </div>
+            <div className={step !== 3 ? "hidden" : ""}>
+              <SignupStep3
+                favoriteTeam={favoriteTeam} setFavoriteTeam={setFavoriteTeam}
+                favoritePlayers={favoritePlayers} setFavoritePlayers={setFavoritePlayers}
+                error={step === 3 ? error : null} loading={loading}
+                onSubmit={handleSignUp} onPrev={goPrev}
+              />
+            </div>
+          </div>
+        )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white font-bold py-3 rounded-2xl disabled:opacity-50 transition-opacity"
-        >
-          {loading ? "처리 중..." : isSignUp ? "회원가입" : "로그인"}
+        <button type="button" onClick={handleToggle} className="text-sm text-gray-400 text-center w-full py-3 touch-manipulation">
+          {isSignUp ? "이미 계정이 있으신가요? 로그인" : "계정이 없으신가요? 회원가입"}
         </button>
-      </form>
-
-      <button
-        onClick={() => { setIsSignUp(!isSignUp); setError(null); setMessage(null); }}
-        className="text-sm text-gray-400 text-center"
-      >
-        {isSignUp ? "이미 계정이 있으신가요? 로그인" : "계정이 없으신가요? 회원가입"}
-      </button>
+      </div>
     </div>
   );
 }
