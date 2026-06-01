@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import type { KboTeam } from "@/types";
 import { EMAIL_REGEX, PASSWORD_RULES } from "@/utils/validation";
@@ -53,7 +52,6 @@ export default function LoginPage() {
   const [favoriteTeam, setFavoriteTeam] = useState<KboTeam | null>(null);
   const [favoritePlayers, setFavoritePlayers] = useState<{ id: number; name: string; team: string }[]>([]);
 
-  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   function handleToggle() {
@@ -106,8 +104,7 @@ export default function LoginPage() {
         setError("가입은 완료되었으나 로그인에 실패했습니다. 로그인 페이지에서 다시 시도해주세요.");
         return;
       }
-      router.push("/mypage");
-      router.refresh();
+      window.location.href = "/mypage";
     } catch {
       setError("네트워크 오류가 발생했습니다.");
     } finally {
@@ -123,7 +120,7 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError("이메일 또는 비밀번호가 올바르지 않습니다.");
-      else { router.push("/mypage"); router.refresh(); }
+      else { window.location.href = "/mypage"; }
     } catch {
       setError("네트워크 오류가 발생했습니다.");
     } finally {

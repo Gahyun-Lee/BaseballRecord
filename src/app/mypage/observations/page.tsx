@@ -14,7 +14,7 @@ export default async function ObservationsPage() {
         <p className="text-sm text-gray-500">나의 직관 기록</p>
         <Link
           href="/mypage/observations/new"
-          className="flex items-center gap-1.5 text-sm text-blue-600 font-semibold"
+          className="flex items-center gap-1.5 text-sm text-navy-600 font-semibold"
         >
           <PlusCircle size={16} />
           기록 추가
@@ -31,7 +31,7 @@ export default async function ObservationsPage() {
         </div>
         <Link
           href="/mypage/observations/new"
-          className="bg-blue-600 text-white text-sm font-bold px-6 py-2.5 rounded-2xl"
+          className="bg-navy-600 text-white text-sm font-bold px-6 py-2.5 rounded-2xl"
         >
           첫 직관 기록 남기기
         </Link>
